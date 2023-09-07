@@ -1,39 +1,3 @@
-/*
-const replayBoxes = document.querySelectorAll(".replay-box");
-const colorObjects = [
-  { name: "Red", hex: "#ff5733" },
-  { name: "Green", hex: "#33ff57" },
-  { name: "Blue", hex: "#5733ff" }
-  // Add more color objects as needed
-];
-
-let currentColorIndexReplay = Math.floor(Math.random() * colorObjects.length);
-
-function changeReplayBoxColor() {
-  // Generate a random index to select a color object
-  const randomIndex = Math.floor(Math.random() * colorObjects.length);
-
-  // Apply the selected color to all replay boxes
-  replayBoxes.forEach((box) => {
-    box.style.backgroundColor = colorObjects[randomIndex].hex;
-  });
-
-  currentColorIndexReplay = randomIndex;
-
-  // Check if the scroll has reached the bottom
-  const replayContainer = document.querySelector(".replays-container");
-  if (
-    replayContainer.scrollTop + replayContainer.clientHeight >=
-    replayContainer.scrollHeight
-  ) {
-    // Reset the scroll position to the top
-    replayContainer.scrollTop = 0;
-  }
-}
-
-window.addEventListener("scroll", changeReplayBoxColor);
-Feel free to remove these once you come back, was not getting anything other than an empty box from the code*/ 
-
 // Wait for the document to be fully loaded
 document.addEventListener('DOMContentLoaded', () => {
   // List of video URLs
@@ -44,57 +8,73 @@ document.addEventListener('DOMContentLoaded', () => {
     'https://titanradio.org/wp-content/uploads/2023/09/No-One-Saw-that-Coming-shorts.mp4',
     // ... more URLs
   ];
-  // Function to shuffle an array
+  // Shuffle the video URLs and store them
+  let shuffledVideos = shuffleArray([...videoUrls]);
+  // Shuffle the video URLs and store them
+  let currentVideoIndex = 0;
+  // Get the video frame from the DOM
+  const frame = document.querySelector('#video-container .frame');
+
+  // Shuffle the array and initialize the video elements
+  shuffleAndInitialize();
+
+  // Function to shuffle the array and initialize the videos
+  function shuffleAndInitialize() {
+    shuffledVideos = shuffleArray([...videoUrls]);
+    populateVideos(true);
+    attachEventListenersToCurrentVideo();
+  }
+// Function to shuffle an array
   function shuffleArray(array) {
     let currentIndex = array.length, randomIndex;
-    // Shuffle the array
+    // While there remain elements to shuffle
     while (currentIndex !== 0) {
+      // Pick a remaining element
       randomIndex = Math.floor(Math.random() * currentIndex);
       currentIndex--;
-    // Swap the current element with a randomly chosen one
-      [array[currentIndex], array[randomIndex]] = [
-        array[randomIndex], array[currentIndex]
-      ];
+      // Swap the elements
+      [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
     }
     return array;
   }
-// Shuffle the video URLs and initialize variables
-  let shuffledVideos = shuffleArray([...videoUrls]);
-  let currentVideoIndex = 0;
-  const videoContainer = document.getElementById('video-container');
-// Function to populate the videos on the page
+// Function to populate videos into the frame
   function populateVideos(initial = false) {
     if (initial) {
-      // Remove all existing videos if it's the initial population
-      while (videoContainer.firstChild) {
-        videoContainer.removeChild(videoContainer.firstChild);
-      }
-  // Create and append video elements for the previous, current, and next videos
-      const prevVideoElement = createVideoElement(shuffledVideos[(currentVideoIndex - 1 + shuffledVideos.length) % shuffledVideos.length]);
-      const currentVideoElement = createVideoElement(shuffledVideos[currentVideoIndex]);
-      const nextVideoElement = createVideoElement(shuffledVideos[(currentVideoIndex + 1) % shuffledVideos.length]);
-  
+      frame.innerHTML = '';  // Clear the frame
+    // Create video elements for the previous, current, and next videos
+      const prevVideoElement = createVideoElement(getVideoUrl(-1));
+      const currentVideoElement = createVideoElement(getVideoUrl(0));
+      const nextVideoElement = createVideoElement(getVideoUrl(1));
+    // Add classes for easier CSS and JS manipulation
       prevVideoElement.classList.add('video-wrapper', 'previous');
       currentVideoElement.classList.add('video-wrapper', 'current');
       nextVideoElement.classList.add('video-wrapper', 'next');
-  
-      videoContainer.appendChild(prevVideoElement);
-      videoContainer.appendChild(currentVideoElement);
-      videoContainer.appendChild(nextVideoElement);
+    // Append the created elements to the frame
+      frame.append(prevVideoElement, currentVideoElement, nextVideoElement);
     } else {
-      // Update the src attributes for existing video elements if it's not the initial population
-      const current = document.querySelector('.video-wrapper.current video source');
-      const next = document.querySelector('.video-wrapper.next video source');
-      const previous = document.querySelector('.video-wrapper.previous video source');
-      
-      current.setAttribute('src', shuffledVideos[currentVideoIndex]);
-      next.setAttribute('src', shuffledVideos[(currentVideoIndex + 1) % shuffledVideos.length]);
-      previous.setAttribute('src', shuffledVideos[(currentVideoIndex - 1 + shuffledVideos.length) % shuffledVideos.length]);
-      // Reload the videos to apply the new src
-      document.querySelectorAll('.video-wrapper video').forEach(video => video.load());
+      // Update the source URLs for the current, next, and previous videos
+      updateSrc('.video-wrapper.current video source', getVideoUrl(0));
+      updateSrc('.video-wrapper.next video source', getVideoUrl(1));
+      updateSrc('.video-wrapper.previous video source', getVideoUrl(-1));
+      // Reload the videos to reflect the new sources
+      reloadVideos();
     }
   }
-  // Function to create a video element for a given URL
+  // Function to update the source URL of a video element
+  function updateSrc(selector, newSrc) {
+    const element = frame.querySelector(selector);
+    element.setAttribute('src', newSrc);
+  }
+  // Function to get the video URL based on the offset from the current index
+  function getVideoUrl(offset) {
+    return shuffledVideos[(currentVideoIndex + offset + shuffledVideos.length) % shuffledVideos.length];
+  }
+
+  function reloadVideos() {
+    frame.querySelectorAll('.video-wrapper video').forEach(video => video.load());
+  }
+
+// Function to create a video element with the given URL
   function createVideoElement(url) {
     const videoWrapper = document.createElement('div');
     videoWrapper.innerHTML = `
@@ -104,56 +84,53 @@ document.addEventListener('DOMContentLoaded', () => {
     `;
     return videoWrapper;
   }
-// Function to handle swipe or scroll direction
-  function move(direction) {
-    // Get the video elements for the current, next, and previous videos
-    const current = document.querySelector('.video-wrapper.current');
-    const next = document.querySelector('.video-wrapper.next');
-    const previous = document.querySelector('.video-wrapper.previous');
 
-  // Move the videos according to the swipe or scroll direction
-    current.classList.replace('current', direction === 'up' ? 'next' : 'previous');
-    next.classList.replace('next', direction === 'up' ? 'previous' : 'current');
-    previous.classList.replace('previous', direction === 'up' ? 'current' : 'next');
-
-// Force reflow to make the above changes take effect immediately
-    current.offsetHeight;
-
-// Update the current video index based on the move direction
-    if (direction === 'up') {
-      currentVideoIndex = (currentVideoIndex - 1 + shuffledVideos.length) % shuffledVideos.length;
-    } else if (direction === 'down') {
-      currentVideoIndex = (currentVideoIndex + 1) % shuffledVideos.length;
-    }
-// Repopulate the videos based on the new current index
-    populateVideos();
+  function attachEventListenersToCurrentVideo() {
+    const currentVideo = frame.querySelector('.video-wrapper.current video');
+    currentVideo.addEventListener('touchstart', handleTouchStart);
+    currentVideo.addEventListener('touchend', handleTouchEnd);
+    currentVideo.addEventListener('wheel', handleWheel);
   }
-// Initialize variables for touch events
-  let touchStartY = 0;
 
-// Record the Y-coordinate when the touch starts
-  document.addEventListener('touchstart', (e) => {
-    touchStartY = e.touches[0].clientY;
-  });
-// Handle the end of the touch event
-  document.addEventListener('touchend', (e) => {
-    const touchEndY = e.changedTouches[0].clientY;
-  // Determine swipe direction and move accordingly  
-    if (touchEndY < touchStartY) {
-      move('down');
-    } else if (touchEndY > touchStartY) {
-      move('up');
-    }
-  });
-// Handle mouse wheel events for scrolling
-  document.addEventListener('wheel', (e) => {
-    if (e.deltaY > 0) {
-      move('down');
-    } else {
-      move('up');
-    }
-  });
-// Initially populate the videos on the page
-  populateVideos(true);
+// Variable to store the Y coordinate of the initial touch point
+  let touchStartY;
+// Function to handle touch start event
+function handleTouchStart(e) {
+  e.preventDefault();  // Prevent page from scrolling
+  touchStartY = e.touches[0].clientY;
+}
+
+// Function to handle touch end event
+function handleTouchEnd(e) {
+  e.preventDefault();  // Prevent page from scrolling
+  const touchEndY = e.changedTouches[0].clientY;
+  move(touchEndY < touchStartY ? 'down' : 'up');
+}
+
+// Function to handle wheel scroll event
+function handleWheel(e) {
+  e.preventDefault();  // Prevent page from scrolling
+  move(e.deltaY > 0 ? 'down' : 'up');
+}
+
+// Function to swap the current, next, and previous videos based on the scroll direction
+  function move(direction) {
+    const classesToSwap = {
+      current: direction === 'up' ? 'next' : 'previous',
+      next: direction === 'up' ? 'previous' : 'current',
+      previous: direction === 'up' ? 'current' : 'next',
+    };
+// Swap classes of video elements based on scroll direction
+    Object.keys(classesToSwap).forEach(oldClass => {
+      const newClass = classesToSwap[oldClass];
+      const element = frame.querySelector(`.video-wrapper.${oldClass}`);
+      element.classList.replace(oldClass, newClass);
+    });
+
+    // Update the current video index based on the scroll direction
+    currentVideoIndex = (currentVideoIndex + (direction === 'up' ? -1 : 1) + shuffledVideos.length) % shuffledVideos.length;
+    // Repopulate the videos and re-attach the event listeners
+    populateVideos();
+    attachEventListenersToCurrentVideo();
+  }
 });
-
