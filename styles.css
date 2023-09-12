@@ -19,7 +19,7 @@ video {
   max-height: 95%; /* Adjust to control max size on larger screens */
   object-fit: cover;
   border-radius: 20px;  /* Rounded corners */
-  border: 7px solid red;  /* Red border */
+  border: 4px solid #DCD0FF;  /* Red border */
 }
 
 /* Mobile-specific settings */
