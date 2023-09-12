@@ -1,6 +1,4 @@
-// Wait for the document to be fully loaded
 document.addEventListener('DOMContentLoaded', () => {
-  // List of video URLs
   const videoUrls = [
     'https://titanradio.org/wp-content/uploads/2023/09/Only-eating-mall-food-for-a-full-day-in-Thailand-foodie-shorts-thailand-mallfood-eating.mp4',
     'https://titanradio.org/wp-content/uploads/2023/09/The-cutest-dress-🥹-Shorts.mp4',
@@ -8,129 +6,155 @@ document.addEventListener('DOMContentLoaded', () => {
     'https://titanradio.org/wp-content/uploads/2023/09/No-One-Saw-that-Coming-shorts.mp4',
     // ... more URLs
   ];
-  // Shuffle the video URLs and store them
-  let shuffledVideos = shuffleArray([...videoUrls]);
-  // Shuffle the video URLs and store them
-  let currentVideoIndex = 0;
-  // Get the video frame from the DOM
-  const frame = document.querySelector('#video-container .frame');
 
-  // Shuffle the array and initialize the video elements
+  let shuffledVideos = shuffleArray([...videoUrls]);
+  let currentVideoIndex = 0;
+  const frame = document.querySelector('.frame');
+
   shuffleAndInitialize();
 
-  // Function to shuffle the array and initialize the videos
+  // Shuffle the array and initialize the video elements
   function shuffleAndInitialize() {
     shuffledVideos = shuffleArray([...videoUrls]);
-    populateVideos(true);
-    attachEventListenersToCurrentVideo();
+    playNextVideo();
   }
-// Function to shuffle an array
+
+  // Function to shuffle an array
   function shuffleArray(array) {
     let currentIndex = array.length, randomIndex;
-    // While there remain elements to shuffle
+
     while (currentIndex !== 0) {
-      // Pick a remaining element
       randomIndex = Math.floor(Math.random() * currentIndex);
       currentIndex--;
-      // Swap the elements
       [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
     }
+
     return array;
   }
-// Function to populate videos into the frame
-  function populateVideos(initial = false) {
-    if (initial) {
-      frame.innerHTML = '';  // Clear the frame
-    // Create video elements for the previous, current, and next videos
-      const prevVideoElement = createVideoElement(getVideoUrl(-1));
-      const currentVideoElement = createVideoElement(getVideoUrl(0));
-      const nextVideoElement = createVideoElement(getVideoUrl(1));
-    // Add classes for easier CSS and JS manipulation
-      prevVideoElement.classList.add('video-wrapper', 'previous');
-      currentVideoElement.classList.add('video-wrapper', 'current');
-      nextVideoElement.classList.add('video-wrapper', 'next');
-    // Append the created elements to the frame
-      frame.append(prevVideoElement, currentVideoElement, nextVideoElement);
+
+  function playNextVideo() {
+    const currentVideo = frame.querySelector('video');
+    
+    if (currentVideo) {
+      currentVideo.className = 'fade-out';
+      setTimeout(() => {
+        currentVideo.remove();
+        appendNewVideo();
+      }, 500);
     } else {
-      // Update the source URLs for the current, next, and previous videos
-      updateSrc('.video-wrapper.current video source', getVideoUrl(0));
-      updateSrc('.video-wrapper.next video source', getVideoUrl(1));
-      updateSrc('.video-wrapper.previous video source', getVideoUrl(-1));
-      // Reload the videos to reflect the new sources
-      reloadVideos();
+      appendNewVideo();
     }
   }
-  // Function to update the source URL of a video element
-  function updateSrc(selector, newSrc) {
-    const element = frame.querySelector(selector);
-    element.setAttribute('src', newSrc);
+  
+  function appendNewVideo() {
+    const videoElement = createVideoElement(getVideoUrl());
+    videoElement.className = 'fade-in';
+    videoElement.addEventListener('ended', onVideoEnd);
+    frame.appendChild(videoElement);
   }
-  // Function to get the video URL based on the offset from the current index
-  function getVideoUrl(offset) {
-    return shuffledVideos[(currentVideoIndex + offset + shuffledVideos.length) % shuffledVideos.length];
+  
+
+  function onVideoEnd() {
+    currentVideoIndex++;
+    if (currentVideoIndex >= shuffledVideos.length) {
+      shuffleAndInitialize();
+    } else {
+      playNextVideo();
+    }
   }
 
-  function reloadVideos() {
-    frame.querySelectorAll('.video-wrapper video').forEach(video => video.load());
+  function getVideoUrl() {
+    return shuffledVideos[currentVideoIndex];
   }
 
-// Function to create a video element with the given URL
+
   function createVideoElement(url) {
-    const videoWrapper = document.createElement('div');
-    videoWrapper.innerHTML = `
-      <video controls>
-        <source src="${url}" type="video/mp4" />
-      </video>
-    `;
-    return videoWrapper;
-  }
+    const video = document.createElement('video');
+    video.setAttribute('controls', 'true');
 
-  function attachEventListenersToCurrentVideo() {
-    const currentVideo = frame.querySelector('.video-wrapper.current video');
-    currentVideo.addEventListener('touchstart', handleTouchStart);
-    currentVideo.addEventListener('touchend', handleTouchEnd);
-    currentVideo.addEventListener('wheel', handleWheel);
-  }
+    const source = document.createElement('source');
+    source.setAttribute('src', url);
+    source.setAttribute('type', 'video/mp4');
 
-// Variable to store the Y coordinate of the initial touch point
-  let touchStartY;
-// Function to handle touch start event
-function handleTouchStart(e) {
-  e.preventDefault();  // Prevent page from scrolling
-  touchStartY = e.touches[0].clientY;
-}
+    video.appendChild(source);
 
-// Function to handle touch end event
-function handleTouchEnd(e) {
-  e.preventDefault();  // Prevent page from scrolling
-  const touchEndY = e.changedTouches[0].clientY;
-  move(touchEndY < touchStartY ? 'down' : 'up');
-}
+    // Attach wheel event listener for desktop
+    video.addEventListener('wheel', handleWheel);
 
-// Function to handle wheel scroll event
-function handleWheel(e) {
-  e.preventDefault();  // Prevent page from scrolling
-  move(e.deltaY > 0 ? 'down' : 'up');
-}
-
-// Function to swap the current, next, and previous videos based on the scroll direction
-  function move(direction) {
-    const classesToSwap = {
-      current: direction === 'up' ? 'next' : 'previous',
-      next: direction === 'up' ? 'previous' : 'current',
-      previous: direction === 'up' ? 'current' : 'next',
-    };
-// Swap classes of video elements based on scroll direction
-    Object.keys(classesToSwap).forEach(oldClass => {
-      const newClass = classesToSwap[oldClass];
-      const element = frame.querySelector(`.video-wrapper.${oldClass}`);
-      element.classList.replace(oldClass, newClass);
+    // Attach touch event listeners for mobile
+    let touchStartY;
+    video.addEventListener('touchstart', e => {
+      touchStartY = e.touches[0].clientY;
     });
 
+    video.addEventListener('touchend', e => {
+      const touchEndY = e.changedTouches[0].clientY;
+      handleTouch(touchStartY, touchEndY);
+    });
+
+    return video;
+  }
+
+  let accumulatedDelta = 0; // To keep track of the scrolling
+  const scrollThreshold = 100; // The scroll distance required to move to the next video
+
+  let debounceTimer;
+
+  function handleWheel(e) {
+    e.preventDefault();
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+      accumulatedDelta += e.deltaY;
+  
+      if (Math.abs(accumulatedDelta) >= scrollThreshold) {
+        const direction = accumulatedDelta > 0 ? 'down' : 'up';
+        move(direction);
+        accumulatedDelta = 0;  // Reset the counter
+      }
+    }, 200); // 200ms debounce time
+  }
+  
+
+  let accumulatedTouchDelta = 0; // To keep track of touch movement
+  function handleTouch(startY, endY) {
+    accumulatedTouchDelta = startY - endY;
+
+    if (Math.abs(accumulatedTouchDelta) >= scrollThreshold) {
+      const direction = accumulatedTouchDelta > 0 ? 'down' : 'up';
+      move(direction);
+      accumulatedTouchDelta = 0;  // Reset the counter
+    }
+  }
+
+  function playNextVideo() {
+    const currentVideo = frame.querySelector('video');
+    if (currentVideo) {
+      currentVideo.className = 'fade-out';
+      setTimeout(() => {
+        currentVideo.remove();
+      }, 500);
+    }
+
+    const videoElement = createVideoElement(getVideoUrl());
+    videoElement.className = 'fade-in';
+    videoElement.addEventListener('ended', onVideoEnd);
+    frame.appendChild(videoElement);
+  }
+
+  let throttle = false; // Add this line to control the throttle status
+  const throttleTime = 1000; // 1000 ms = 1 second, set this to the value you need
+  
+  // Modify the move() function to implement throttling
+  function move(direction) {
+    if (throttle) return; // if throttle is true, return
+    throttle = true; // set throttle to true to prevent function execution
+    setTimeout(() => { throttle = false }, throttleTime); // reset the throttle flag after throttleTime
+    
     // Update the current video index based on the scroll direction
     currentVideoIndex = (currentVideoIndex + (direction === 'up' ? -1 : 1) + shuffledVideos.length) % shuffledVideos.length;
-    // Repopulate the videos and re-attach the event listeners
-    populateVideos();
-    attachEventListenersToCurrentVideo();
+    
+    // Play the next video in the sequence
+    playNextVideo();
   }
+  
 });
