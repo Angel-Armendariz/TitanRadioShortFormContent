@@ -71,32 +71,38 @@ document.addEventListener('DOMContentLoaded', () => {
   function createVideoElement(url) {
     const video = document.createElement('video');
     video.setAttribute('controls', 'true');
-
+  
     const source = document.createElement('source');
     source.setAttribute('src', url);
     source.setAttribute('type', 'video/mp4');
-
+  
     video.appendChild(source);
-
+  
     // Attach wheel event listener for desktop
     video.addEventListener('wheel', handleWheel);
-
+  
     // Attach touch event listeners for mobile
     let touchStartY;
     video.addEventListener('touchstart', e => {
       touchStartY = e.touches[0].clientY;
     });
-
+  
     video.addEventListener('touchend', e => {
       const touchEndY = e.changedTouches[0].clientY;
       handleTouch(touchStartY, touchEndY);
     });
-
+  
+    // Prevent default scroll on touchmove
+    video.addEventListener('touchmove', e => {
+      e.preventDefault();
+    });
+  
     return video;
   }
+  
 
   let accumulatedDelta = 0; // To keep track of the scrolling
-  const scrollThreshold = 100; // The scroll distance required to move to the next video
+  const scrollThreshold = 50; // The scroll distance required to move to the next video
 
   let debounceTimer;
 
